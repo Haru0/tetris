@@ -6,7 +6,7 @@ from src.config import Config
 
 class CollisionBlock(Block):
     """
-        Collision block.
+    Collision block.
     """
 
     def __init__(self, x, y):

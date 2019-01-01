@@ -1,29 +1,25 @@
-import os
-
 import pygame
 
 from src.board import Board
 from src.config import Config
 
-os.environ['SDL_VIDEO_CENTERED'] = '1'
-
 
 class Game(object):
     """
-        Game responsibility is to:
-         - handle main game loop
-         - intercept input and pass it to board game object
+    Main game object, responsible primarily for firing the game. Remaining functionality is:
+        - Initialize game objects
+        - Handle game loop
+        - Intercept input and pass it to Board game object
     """
 
-    score = 0
-    speed = 100
+    speed: int = 500
 
-    PUSH_DOWN = pygame.USEREVENT + 1
+    PULL: int = pygame.USEREVENT + 1
 
     def __init__(self, width=Config().width, height=Config().height):
         self._screen = pygame.display.set_mode((width, height))
 
-    def init(self):
+    def init(self) -> None:
         pygame.init()
         pygame.display.set_caption("Tetris")
 
@@ -35,7 +31,7 @@ class Game(object):
         clock = pygame.time.Clock()
 
         pygame.key.set_repeat(500)
-        pygame.time.set_timer(self.PUSH_DOWN, 500)
+        pygame.time.set_timer(self.PULL, self.speed)
 
         background = pygame.Surface(self._screen.get_size())
         background.fill((0, 0, 0))
@@ -56,7 +52,7 @@ class Game(object):
             if not pause:
                 time_passed += seconds
 
-            push_down = drop = False
+            pull = drop = False
             direction = rotation = None
 
             for event in pygame.event.get():
@@ -81,8 +77,8 @@ class Game(object):
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_d:
                     drop = True
 
-                if event.type == self.PUSH_DOWN:
-                    direction = pygame.K_DOWN
+                if event.type == self.PULL:
+                    pull = True
 
             if pause:
                 continue
@@ -92,7 +88,7 @@ class Game(object):
                 background,
                 seconds,
                 drop,
-                push_down,
+                pull,
                 rotation,
                 direction
             )

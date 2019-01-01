@@ -14,16 +14,15 @@ from src.sprites.tetromino.z import Z
 
 class TetrominoFactory(object):
     """
-        Tetromino factory responsibility is to **randomly** construct one of available tetromino sprite.
+    Tetromino factory responsibility is to **randomly** construct one of available tetromino sprite.
     """
 
     available = ('I', 'J', 'L', 'O', 'S', 'T', 'Z')
 
-    def randomize(self, collision_group: AbstractGroup, frozen_tetrominos_layer: AbstractGroup) -> Base:
+    def randomize(self, frozen_tetrominos_layer: AbstractGroup) -> Base:
         tetromino_class = globals()[choice(self.available)]
 
         tetromino = tetromino_class()
-        tetromino._collision_group = collision_group
         tetromino._frozen_tetrominos_layer = frozen_tetrominos_layer
 
         return tetromino

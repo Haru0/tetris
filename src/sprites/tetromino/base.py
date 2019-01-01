@@ -7,17 +7,16 @@ from src.config import Config
 
 class Base(Sprite):
     """
-        Base tetromino class is handling its behaviour, this is:
-            - check movement collisions
-            - horizontal movement
-            - dropping
-            - rotating
+    Base Tetromino class
+        - Check movement collisions
+        - Horizontal movement
+        - Dropping
+        - Rotating
     """
 
     _color = (0, 0, 0)
     _frozen = False
 
-    _collision_group: AbstractGroup
     _frozen_tetrominos_layer: AbstractGroup
 
     def __init__(self, color) -> None:
@@ -48,12 +47,16 @@ class Base(Sprite):
     def frozen(self) -> bool:
         return self._frozen
 
-    def update(self, seconds, drop=False, push_down=False, rotation=None, direction=None):
+    def update(self, seconds, drop=False, pull=False, rotation=None, direction=None):
         if self.frozen:
             return
 
         if drop:
             self.drop()
+            return
+
+        if pull:
+            self.pull()
             return
 
         if rotation:
@@ -62,118 +65,129 @@ class Base(Sprite):
         if direction:
             self.move(direction)
 
+        return
+
     def drop(self):
-        while not self._frozen:
-            self.move(pygame.K_DOWN, False)
+        while not self.frozen:
+            self.down(False)
 
             if self.collides:
-                self.move(pygame.K_UP, False)
+                self.up(False)
                 self.freeze()
+
                 continue
 
             if self.rect.bottom == Config().height:
                 self.freeze()
+
                 continue
 
+        return
+
+    def pull(self):
+        self.down(False)
+
+        if self.collides or self.rect.bottom > Config().height:
+            self.up(False)
+            self.freeze()
+
+        return
+
     def freeze(self):
-        if not self._frozen:
-            self.remove(self.groups())
-            self.add(self._frozen_tetrominos_layer)
-            self._frozen = True
+        if self.frozen:
+            return
 
-    def up(self) -> None:
-        pass
+        self.remove(self.groups())
+        self.add(self._frozen_tetrominos_layer)
 
-    def right(self) -> None:
-        pass
+        self._frozen = True
 
-    def down(self) -> None:
-        pass
+        return
 
-    def left(self) -> None:
-        pass
+    def up(self, check_collision: bool = True) -> None:
+        self.rect.move_ip(0, -Config.scale)
+
+        if check_collision and self.collides:
+            self.down(False)
+
+    def right(self, check_collision: bool = True) -> None:
+        self.rect.move_ip(Config.scale, 0)
+
+        if check_collision and self.collides:
+            self.left(False)
+
+    def down(self, check_collision: bool = True) -> None:
+        self.rect.move_ip(0, Config.scale)
+
+        if check_collision and self.collides:
+            self.up(False)
+
+    def left(self, check_collision: bool = True) -> None:
+        self.rect.move_ip(-Config.scale, 0)
+
+        if check_collision and self.collides:
+            self.right(False)
 
     def move(self, direction, check_collision: bool = True) -> None:
         if direction == pygame.K_UP and self.rect.top > 0:
-            print("move up")
-            self.rect.top -= Config.scale
-
-            if check_collision and self.collides:
-                self.move(pygame.K_DOWN)
+            self.up(check_collision)
 
         if direction == pygame.K_RIGHT and self.rect.right < Config().width:
-            print("move right")
-            self.rect.right += Config.scale
-
-            if check_collision and self.collides:
-                self.move(pygame.K_LEFT)
+            self.right(check_collision)
 
         if direction == pygame.K_DOWN and self.rect.bottom < Config().height:
-            print("move down")
-            self.rect.bottom += Config.scale
-
-            if check_collision and self.collides:
-                self.move(pygame.K_UP)
-                # self.freeze()
+            self.down(check_collision)
 
         if direction == pygame.K_LEFT and self.rect.left > 0:
-            print("move left")
-            self.rect.left -= Config.scale
+            self.left(check_collision)
 
-            if check_collision and self.collides:
-                self.move(pygame.K_RIGHT)
+        return
 
-    # def up(self, check_collision: bool = True):
-    #     if self.rect.top > 0:
-    #         # print("move up")
-    #         self.rect.top -= Config.scale
-    #
-    #         if check_collision and self.collides:
-    #             self.freeze()
-    #             self.move(pygame.K_DOWN)
+    def rotate_cw(self, check_collision: bool = True) -> None:
+        x, y = self.rect.topleft
 
-    def step(self, check_collision: bool = True):
-        # print("move down", self.rect.bottom, Config().height)
-        if self.rect.bottom < Config().height:
-            self.rect.bottom += Config.scale
-        else:
-            self.freeze()
+        self.image = pygame.transform.rotate(self.image, -90)
+        self.rect = self.image.get_rect()
 
-        if check_collision and self.collides:
-            self.move(pygame.K_UP)
-            self.freeze()
+        self.rect.topleft = x, y
+        self.mask = pygame.mask.from_threshold(self.image, self.color, (1, 1, 1, 255))
 
-    def rotate_cw(self) -> None:
-        pass
+        if check_collision and (self.collides or self.out_of_bounds):
+            self.rotate_ccw(False)
 
-    def rotate_ccw(self) -> None:
-        pass
+        return
 
-    def rotate(self, rotation) -> None:
-        """
-            todo collision & draw bounds -> revert
-        """
+    def rotate_ccw(self, check_collision: bool = True) -> None:
+        x, y = self.rect.topleft
+
+        self.image = pygame.transform.rotate(self.image, 90)
+        self.rect = self.image.get_bounding_rect()
+
+        self.rect.topleft = x, y
+        self.mask = pygame.mask.from_threshold(self.image, self.color, (1, 1, 1, 255))
+
+        if check_collision and (self.collides or self.out_of_bounds):
+            self.rotate_cw(False)
+
+        return
+
+    def rotate(self, rotation, check_collision: bool = True) -> None:
         if rotation == pygame.K_UP:
-            print("Rotate ccw")
-            old_x, old_y = self.rect.x, self.rect.y
-            self.image = pygame.transform.rotate(self.image, 90)
-            self.rect = self.image.get_bounding_rect()
-            self.rect.x, self.rect.y = old_x, old_y
-            self.mask = pygame.mask.from_threshold(self.image, self.color, (1, 1, 1, 255))
+            self.rotate_ccw(check_collision)
 
         if rotation == pygame.K_DOWN:
-            print("Rotate cw")
-            old_x, old_y = self.rect.x, self.rect.y
-            self.image = pygame.transform.rotate(self.image, -90)
-            self.rect = self.image.get_rect()
-            self.rect.x, self.rect.y = old_x, old_y
-            self.mask = pygame.mask.from_threshold(self.image, self.color, (1, 1, 1, 255))
+            self.rotate_ccw(check_collision)
+
+        return
 
     @property
     def collides(self) -> bool:
         """
-            Check if tetromino collides with anything else than himself.
+        Check if tetromino collides with anything else than himself.
         """
-        return 1 <= len(
-            pygame.sprite.spritecollide(self, self._frozen_tetrominos_layer, False, pygame.sprite.collide_mask))
-        # return 1 < len(pygame.sprite.spritecollide(self, self._collision_group, False, pygame.sprite.collide_mask))
+
+        return 1 <= len(pygame.sprite.spritecollide(self, self._frozen_tetrominos_layer, False, pygame.sprite.collide_mask))
+
+    @property
+    def out_of_bounds(self) -> bool:
+        return self.rect.top < 0 or self.rect.right > Config().width or self.rect.bottom > Config().height or self.rect.left < 0

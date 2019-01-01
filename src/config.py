@@ -1,17 +1,21 @@
 class Config(object):
     """
-        Config collects general configuration variables such as:
-         - Size of a block
-         - Maximum frame rate
+    Config collects global configuration variables.
     """
 
-    fps = 60
-    scale = 40
+    fps: int = 60
+    scale: int = 40
 
     @property
     def height(self) -> int:
+        """
+        Get game board pixel height.
+        """
         return self.scale * 20
 
     @property
     def width(self) -> int:
+        """
+        Get game board pixel width.
+        """
         return self.scale * 10
